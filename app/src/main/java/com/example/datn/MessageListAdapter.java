@@ -1,6 +1,7 @@
 package com.example.datn;
 
 import android.content.Context;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -39,12 +40,20 @@ public class MessageListAdapter extends RecyclerView.Adapter<MessageListViewHold
     public void onBindViewHolder(@NonNull MessageListViewHolder holder, int position) {
         holder.bindView(list_message.get(position));
         if ("2".equals(list_message.get(position).getType())){
-            RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) holder.content.getLayoutParams();
-            params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) holder.itemLayout.getLayoutParams();
+            params.gravity = Gravity.END;
+            holder.itemLayout.setLayoutParams(params);
+
+            params = (LinearLayout.LayoutParams) holder.content.getLayoutParams();
+            params.gravity = Gravity.END;
             holder.content.setLayoutParams(params);
         } else {
-            RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) holder.content.getLayoutParams();
-            params.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
+            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) holder.itemLayout.getLayoutParams();
+            params.gravity = Gravity.START;
+            holder.itemLayout.setLayoutParams(params);
+
+            params = (LinearLayout.LayoutParams) holder.content.getLayoutParams();
+            params.gravity = Gravity.START;
             holder.content.setLayoutParams(params);
         }
     }
@@ -57,17 +66,19 @@ public class MessageListAdapter extends RecyclerView.Adapter<MessageListViewHold
 
 class MessageListViewHolder extends RecyclerView.ViewHolder{
 
+    LinearLayout itemLayout;
     TextView content, dateTime;
 
     public MessageListViewHolder(@NonNull View itemView) {
         super(itemView);
 
+        itemLayout = itemView.findViewById(R.id.item_layout);
         content = itemView.findViewById(R.id.content_message);
         dateTime = itemView.findViewById(R.id.date_time);
     }
 
     void bindView(Message message){
         content.setText(message.getBody());
-        dateTime.setText(message.getType());
+//        dateTime.setText(message.getDate_sent());
     }
 }

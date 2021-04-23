@@ -1,6 +1,7 @@
 package com.example.datn;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -47,6 +48,8 @@ public class MessageListAdapter extends RecyclerView.Adapter<MessageListViewHold
             params = (LinearLayout.LayoutParams) holder.content.getLayoutParams();
             params.gravity = Gravity.END;
             holder.content.setLayoutParams(params);
+            holder.content.setBackground(context.getDrawable(R.drawable.background_message_sender));
+            holder.content.setTextColor(context.getResources().getColor(R.color.white));
         } else {
             LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) holder.itemLayout.getLayoutParams();
             params.gravity = Gravity.START;
@@ -55,6 +58,8 @@ public class MessageListAdapter extends RecyclerView.Adapter<MessageListViewHold
             params = (LinearLayout.LayoutParams) holder.content.getLayoutParams();
             params.gravity = Gravity.START;
             holder.content.setLayoutParams(params);
+            holder.content.setBackground(context.getDrawable(R.drawable.background_message));
+            holder.content.setTextColor(context.getResources().getColor(R.color.black));
         }
     }
 

@@ -47,7 +47,6 @@ public class ConversationsListAdapter extends RecyclerView.Adapter<Conversations
             intent.putExtra(THREAD_ID, list_Conversation.get(position).getThread_id());
             intent.putExtra(ADDRESS, list_Conversation.get(position).getAddress());
             context.startActivity(intent);
-            Toast.makeText(context, "clicked "+list_Conversation.get(position).getDate_send(), Toast.LENGTH_SHORT).show();
         });
     }
 

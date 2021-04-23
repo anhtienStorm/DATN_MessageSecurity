@@ -15,7 +15,7 @@
         <TextView
             android:id="@+id/content_message"
             android:layout_width="wrap_content"
-            android:padding="10dp"
+            android:textSize="18sp"
             android:background="@drawable/background_message"
             android:layout_height="wrap_content"/>
 

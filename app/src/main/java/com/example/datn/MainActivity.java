@@ -2,8 +2,10 @@ package com.example.datn;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.loader.content.AsyncTaskLoader;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -12,12 +14,17 @@ import android.content.ContentValues;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Telephony;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import com.example.datn.encrypt.SmsSecure;
@@ -55,6 +62,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void load_list_message() {
+        list_conversation.clear();
         Uri uri = Telephony.MmsSms.CONTENT_CONVERSATIONS_URI;
         Cursor cursor = getContentResolver().query(uri, null, null,
                 null, null);
@@ -131,18 +139,37 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu, menu);
+        getMenuInflater().inflate(R.menu.encrypt_menu, menu);
         return true;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         switch (item.getItemId()){
             case R.id.encrypt_message:
-
+                View inputPassEncryptLayout = getLayoutInflater().inflate(R.layout.input_password_layout, null);
+                EditText inputPassEncrypt = inputPassEncryptLayout.findViewById(R.id.input_password);
+                AlertDialog.Builder encryptDialogBuilder = new AlertDialog.Builder(this);
+                encryptDialogBuilder.setTitle("Nhập vào mật khẩu")
+                        .setView(inputPassEncryptLayout)
+                        .setPositiveButton("Ok", (dialogInterface, i) -> {
+                            encryptAllMessage(inputPassEncrypt.getText().toString());
+                        })
+                        .setNegativeButton("Huỷ", (dialogInterface, i) -> {}).create();
+                encryptDialogBuilder.show();
                 break;
             case R.id.decrypt_message:
-
+                View inputPassDecryptLayout = getLayoutInflater().inflate(R.layout.input_password_layout, null);
+                EditText inputPassDecrypt = inputPassDecryptLayout.findViewById(R.id.input_password);
+                AlertDialog.Builder decryptDialogBuilder = new AlertDialog.Builder(this);
+                decryptDialogBuilder.setTitle("Nhập vào mật khẩu")
+                        .setView(inputPassDecryptLayout)
+                        .setPositiveButton("Ok", (dialogInterface, i) -> {
+                            decryptAllMessage(inputPassDecrypt.getText().toString());
+                        })
+                        .setNegativeButton("Huỷ", (dialogInterface, i) -> {}).create();
+                decryptDialogBuilder.show();
                 break;
         }
         return super.onOptionsItemSelected(item);
@@ -155,11 +182,27 @@ public class MainActivity extends AppCompatActivity {
         while (cursor.moveToNext()) {
             String body = cursor.getString(cursor.getColumnIndex(Telephony.Sms.BODY));
             ContentValues values = new ContentValues();
-            values.put(Telephony.Sms.BODY, SmsSecure.encrypt(pass, body));
+            values.put(Telephony.Sms.BODY, SmsSecure.encrypt(pass, "encrypted_by_AT"+body));
             int numRowsUpdated = getContentResolver().update(Telephony.Sms.CONTENT_URI, values,
                     Telephony.Sms._ID + "=?",
                     new String[]{String.valueOf(cursor.getString(cursor.getColumnIndex(Telephony.Sms._ID)))});
             Log.d("TienNAb", "updateMessage: "+numRowsUpdated);
         }
     }
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private void decryptAllMessage(String pass){
+        Cursor cursor = getContentResolver().query(Telephony.Sms.CONTENT_URI, null,
+                null, null, null);
+        while (cursor.moveToNext()) {
+            String body = cursor.getString(cursor.getColumnIndex(Telephony.Sms.BODY));
+            ContentValues values = new ContentValues();
+            values.put(Telephony.Sms.BODY, SmsSecure.decrypt(pass, "encrypted_by_AT"+body));
+            int numRowsUpdated = getContentResolver().update(Telephony.Sms.CONTENT_URI, values,
+                    Telephony.Sms._ID + "=?",
+                    new String[]{String.valueOf(cursor.getString(cursor.getColumnIndex(Telephony.Sms._ID)))});
+            Log.d("TienNAb", "updateMessage: "+numRowsUpdated);
+        }
+    }
+
 }

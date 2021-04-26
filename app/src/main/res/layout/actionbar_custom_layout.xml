@@ -23,6 +23,7 @@
         android:layout_height="20dp"
         android:src="@drawable/ic_locked"
         android:tint="@color/white"
+        android:visibility="gone"
         android:layout_centerVertical="true"
         android:layout_alignParentRight="true"
         android:layout_marginRight="65dp"

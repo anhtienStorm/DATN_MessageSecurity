@@ -5,12 +5,14 @@ import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.loader.content.AsyncTaskLoader;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.Manifest;
+import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
@@ -19,12 +21,12 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.Telephony;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
-import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.datn.encrypt.SmsSecure;
@@ -154,7 +156,8 @@ public class MainActivity extends AppCompatActivity {
                 encryptDialogBuilder.setTitle("Nhập vào mật khẩu")
                         .setView(inputPassEncryptLayout)
                         .setPositiveButton("Ok", (dialogInterface, i) -> {
-                            encryptAllMessage(inputPassEncrypt.getText().toString());
+                            new encryptDecryptAsyncTask(this).execute(
+                                    "encrypt",inputPassEncrypt.getText().toString());
                         })
                         .setNegativeButton("Huỷ", (dialogInterface, i) -> {}).create();
                 encryptDialogBuilder.show();
@@ -166,7 +169,8 @@ public class MainActivity extends AppCompatActivity {
                 decryptDialogBuilder.setTitle("Nhập vào mật khẩu")
                         .setView(inputPassDecryptLayout)
                         .setPositiveButton("Ok", (dialogInterface, i) -> {
-                            decryptAllMessage(inputPassDecrypt.getText().toString());
+                            new encryptDecryptAsyncTask(this).execute(
+                                    "decrypt",inputPassDecrypt.getText().toString());
                         })
                         .setNegativeButton("Huỷ", (dialogInterface, i) -> {}).create();
                 decryptDialogBuilder.show();
@@ -205,4 +209,46 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private class encryptDecryptAsyncTask extends AsyncTask<String,String,Void>{
+
+        Activity activity;
+        ProgressDialog progressDialog;
+
+        public encryptDecryptAsyncTask(Activity activity){
+            this.activity = activity;
+        }
+
+        @Override
+        protected Void doInBackground(String... strings) {
+            publishProgress(strings[0]);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if ("encrypt".equals(strings[0])){
+                    encryptAllMessage(strings[1]);
+                } else if ("decrypt".equals(strings[0])){
+                    decryptAllMessage(strings[1]);
+                }
+            }
+            return null;
+        }
+
+        @Override
+        protected void onProgressUpdate(String... values) {
+            super.onProgressUpdate(values);
+            progressDialog = new ProgressDialog(activity);
+            progressDialog.show();
+            View view = activity.getLayoutInflater().inflate(R.layout.progress_dialog_layout, null);
+            TextView textLoading = view.findViewById(R.id.text_loading);
+            textLoading.setText(values[0]+"ing...");
+            progressDialog.setContentView(view);
+            progressDialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            super.onPostExecute(aVoid);
+            progressDialog.dismiss();
+            Toast.makeText(activity, "Done", Toast.LENGTH_SHORT).show();
+            load_list_message();
+        }
+    }
 }

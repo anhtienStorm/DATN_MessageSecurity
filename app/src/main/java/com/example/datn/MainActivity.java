@@ -102,6 +102,7 @@ public class MainActivity extends AppCompatActivity {
 
             list_conversation.add(conversation);
         }
+        adapter.notifyDataSetChanged();
     }
 
     private void checkForSmsPermission() {
@@ -200,8 +201,13 @@ public class MainActivity extends AppCompatActivity {
                 null, null, null);
         while (cursor.moveToNext()) {
             String body = cursor.getString(cursor.getColumnIndex(Telephony.Sms.BODY));
+            String decryptBody = SmsSecure.decrypt(pass, body);
             ContentValues values = new ContentValues();
-            values.put(Telephony.Sms.BODY, SmsSecure.decrypt(pass, "encrypted_by_AT"+body));
+            if (decryptBody.contains("encrypted_by_AT")){
+                values.put(Telephony.Sms.BODY, decryptBody.replace("encrypted_by_AT",""));
+            } else {
+                values.put(Telephony.Sms.BODY, body);
+            }
             int numRowsUpdated = getContentResolver().update(Telephony.Sms.CONTENT_URI, values,
                     Telephony.Sms._ID + "=?",
                     new String[]{String.valueOf(cursor.getString(cursor.getColumnIndex(Telephony.Sms._ID)))});

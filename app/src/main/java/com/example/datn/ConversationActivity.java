@@ -1,40 +1,33 @@
 package com.example.datn;
 
-import android.app.ActionBar;
+import android.app.Activity;
 import android.app.PendingIntent;
+import android.app.ProgressDialog;
 import android.content.ContentValues;
 import android.database.Cursor;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Telephony;
 import android.telephony.SmsManager;
 import android.text.TextUtils;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.datn.encrypt.SmsSecure;
 
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
-
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.IvParameterSpec;
 
 public class ConversationActivity extends AppCompatActivity {
 
@@ -46,7 +39,7 @@ public class ConversationActivity extends AppCompatActivity {
     private ArrayList<Message> list_message = new ArrayList<>();
     private RecyclerView messageRecyclerView;
     private MessageListAdapter adapter;
-    private ImageView bt_send, bt_lock, bt_unlock;
+    private ImageView bt_send, bt_unlock;
     private EditText input;
     private TextView titleView;
 
@@ -82,15 +75,22 @@ public class ConversationActivity extends AppCompatActivity {
         actionBar.setDisplayOptions(actionBar.getDisplayOptions()
                 | androidx.appcompat.app.ActionBar.DISPLAY_SHOW_CUSTOM);
         View actionbarView = getLayoutInflater().inflate(R.layout.actionbar_custom_layout,null);
-        bt_lock = actionbarView.findViewById(R.id.lock);
         bt_unlock = actionbarView.findViewById(R.id.unlock);
         titleView = actionbarView.findViewById(R.id.title);
         titleView.setText(title);
         bt_unlock.setOnClickListener(v -> {
-            unlock_thread(thread_id);
+            View inputPassLayout = getLayoutInflater().inflate(R.layout.input_password_layout, null);
+            EditText inputPass = inputPassLayout.findViewById(R.id.input_password);
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("Nhập vào mật khẩu")
+                    .setView(inputPassLayout)
+                    .setPositiveButton("Ok", (dialogInterface, i) -> {
+                        new DecryptAsyncTask(this).execute(inputPass.getText().toString());
+                    })
+                    .setNegativeButton("Huỷ", (dialogInterface, i) -> {})
+                    .create().show();
         });
         actionBar.setCustomView(actionbarView);
-
     }
 
     void updateList(){
@@ -149,10 +149,10 @@ public class ConversationActivity extends AppCompatActivity {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
-    private void unlock_thread(String id){
+    private void unlock_thread(String pass){
         list_message.clear();
         Cursor cursor = getContentResolver().query(Telephony.Sms.CONTENT_URI, null,
-                "thread_id = " + id, null, null);
+                "thread_id = " + thread_id, null, null);
         while (cursor.moveToNext()) {
             String _id = cursor.getString(cursor.getColumnIndex("_id"));
             String thread_id = cursor.getString(cursor.getColumnIndex("thread_id"));
@@ -164,9 +164,11 @@ public class ConversationActivity extends AppCompatActivity {
             String reply_path_present = cursor.getString(
                     cursor.getColumnIndex("reply_path_present"));
             String subject = cursor.getString(cursor.getColumnIndex("subject"));
+
             String body = cursor.getString(cursor.getColumnIndex("body"));
-            String decryptBody = SmsSecure.decrypt("anhtien", body);
+            String decryptBody = SmsSecure.decrypt(pass, body);
             decryptBody = decryptBody.replace("encrypted_by_AT","");
+
             String service_center = cursor.getString(
                     cursor.getColumnIndex("service_center"));
             String locked = cursor.getString(cursor.getColumnIndex("locked"));
@@ -180,7 +182,6 @@ public class ConversationActivity extends AppCompatActivity {
 
             list_message.add(message);
         }
-        adapter.notifyDataSetChanged();
     }
 
     private void send_message(String destinationAddress, EditText smsEditText){
@@ -206,5 +207,43 @@ public class ConversationActivity extends AppCompatActivity {
                 smsEditText.setText("");
 //            }
 //        }, 5000);
+    }
+
+    private class DecryptAsyncTask extends AsyncTask<String, Void, Void>{
+
+        Activity activity;
+        ProgressDialog progressDialog;
+
+        public DecryptAsyncTask(Activity activity){
+            this.activity = activity;
+        }
+
+        @RequiresApi(api = Build.VERSION_CODES.O)
+        @Override
+        protected Void doInBackground(String... strings) {
+            publishProgress();
+            unlock_thread(strings[0]);
+            return null;
+        }
+
+        @Override
+        protected void onProgressUpdate(Void... values) {
+            super.onProgressUpdate(values);
+            progressDialog = new ProgressDialog(activity);
+            progressDialog.show();
+            View view = activity.getLayoutInflater().inflate(R.layout.progress_dialog_layout, null);
+            TextView textLoading = view.findViewById(R.id.text_loading);
+            textLoading.setText("Loading...");
+            progressDialog.setContentView(view);
+            progressDialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            super.onPostExecute(aVoid);
+            progressDialog.dismiss();
+            adapter.notifyDataSetChanged();
+            Toast.makeText(activity, "Done", Toast.LENGTH_SHORT).show();
+        }
     }
 }

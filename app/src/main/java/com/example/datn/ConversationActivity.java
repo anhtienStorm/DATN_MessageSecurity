@@ -3,7 +3,7 @@ package com.example.datn;
 import android.app.Activity;
 import android.app.PendingIntent;
 import android.app.ProgressDialog;
-import android.content.ContentValues;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -11,7 +11,6 @@ import android.os.Bundle;
 import android.provider.Telephony;
 import android.telephony.SmsManager;
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -33,7 +32,8 @@ public class ConversationActivity extends AppCompatActivity {
 
     private static final String THREAD_ID = "thread_id";
     private static final String ADDRESS = "address";
-    private static final String PASS = "171098";
+    private static final String MY_PREFS = "MyPrefs";
+    private static final String ENCRYPT = "Encrypt";
 
     private String thread_id, title;
     private ArrayList<Message> list_message = new ArrayList<>();
@@ -51,6 +51,7 @@ public class ConversationActivity extends AppCompatActivity {
 
         thread_id = getIntent().getStringExtra(THREAD_ID);
         title = getIntent().getStringExtra(ADDRESS);
+        setTitle("");
 
         messageRecyclerView = findViewById(R.id.list_message);
         bt_send = findViewById(R.id.bt_send);
@@ -65,17 +66,25 @@ public class ConversationActivity extends AppCompatActivity {
         updateList();
 
         bt_send.setOnClickListener(v -> {
-//            updateMessage(thread_id);
             if (!TextUtils.isEmpty(input.getText().toString())) {
                 send_message(title, input);
             }
         });
+
+        SharedPreferences sharedPreferences = getSharedPreferences(MY_PREFS, MODE_PRIVATE);
 
         androidx.appcompat.app.ActionBar actionBar = getSupportActionBar();
         actionBar.setDisplayOptions(actionBar.getDisplayOptions()
                 | androidx.appcompat.app.ActionBar.DISPLAY_SHOW_CUSTOM);
         View actionbarView = getLayoutInflater().inflate(R.layout.actionbar_custom_layout,null);
         bt_unlock = actionbarView.findViewById(R.id.unlock);
+        boolean bool;
+        if (sharedPreferences.contains(ENCRYPT)){
+            bool = sharedPreferences.getBoolean(ENCRYPT, false);
+        } else {
+            bool = false;
+        }
+        bt_unlock.setVisibility(bool ? View.VISIBLE : View.GONE);
         titleView = actionbarView.findViewById(R.id.title);
         titleView.setText(title);
         bt_unlock.setOnClickListener(v -> {
@@ -119,38 +128,19 @@ public class ConversationActivity extends AppCompatActivity {
             String locked = cursor.getString(cursor.getColumnIndex("locked"));
             String error_code = cursor.getString(cursor.getColumnIndex("error_code"));
             String seen = cursor.getString(cursor.getColumnIndex("seen"));
-            String priority = cursor.getString(cursor.getColumnIndex("priority"));
 
             Message message = new Message(_id, thread_id, date, date_sent, read, status, type,
-                    reply_path_present, subject, body, service_center, locked, error_code, seen,
-                    priority);
+                    reply_path_present, subject, body, service_center, locked, error_code, seen);
 
             list_message.add(message);
         }
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
-    private void updateMessage(String id){
-        Cursor cursor = getContentResolver().query(Telephony.Sms.CONTENT_URI, null,
-                "thread_id = " + id, null, null);
-        while (cursor.moveToNext()) {
-            String body = cursor.getString(cursor.getColumnIndex(Telephony.Sms.BODY));
-            ContentValues values = new ContentValues();
-            try {
-                values.put(Telephony.Sms.BODY, SmsSecure.decrypt(PASS, body));
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            int numRowsUpdated = getContentResolver().update(Telephony.Sms.CONTENT_URI, values,
-                    Telephony.Sms._ID + "=?",
-                    new String[]{String.valueOf(cursor.getString(cursor.getColumnIndex(Telephony.Sms._ID)))});
-            Log.d("TienNAb", "updateMessage: "+numRowsUpdated);
-        }
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.O)
     private void unlock_thread(String pass){
         list_message.clear();
+        SmsSecure.generateIV();
+        SmsSecure.generateSecretKey(pass);
         Cursor cursor = getContentResolver().query(Telephony.Sms.CONTENT_URI, null,
                 "thread_id = " + thread_id, null, null);
         while (cursor.moveToNext()) {
@@ -166,7 +156,7 @@ public class ConversationActivity extends AppCompatActivity {
             String subject = cursor.getString(cursor.getColumnIndex("subject"));
 
             String body = cursor.getString(cursor.getColumnIndex("body"));
-            String decryptBody = SmsSecure.decrypt(pass, body);
+            String decryptBody = SmsSecure.decrypt(body);
             decryptBody = decryptBody.replace("encrypted_by_AT","");
 
             String service_center = cursor.getString(
@@ -174,11 +164,9 @@ public class ConversationActivity extends AppCompatActivity {
             String locked = cursor.getString(cursor.getColumnIndex("locked"));
             String error_code = cursor.getString(cursor.getColumnIndex("error_code"));
             String seen = cursor.getString(cursor.getColumnIndex("seen"));
-            String priority = cursor.getString(cursor.getColumnIndex("priority"));
 
             Message message = new Message(_id, thread_id, date, date_sent, read, status, type,
-                    reply_path_present, subject, decryptBody, service_center, locked, error_code, seen,
-                    priority);
+                    reply_path_present, subject, decryptBody, service_center, locked, error_code, seen);
 
             list_message.add(message);
         }
@@ -203,7 +191,7 @@ public class ConversationActivity extends AppCompatActivity {
 //        new Handler().postDelayed(new Runnable() {
 //            @Override
 //            public void run() {
-//                updateList();
+                updateList();
                 smsEditText.setText("");
 //            }
 //        }, 5000);

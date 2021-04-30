@@ -26,23 +26,32 @@ public class SmsSecure {
 
     private static final String SALT = "thuuyennguyen";
 
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    public static String encrypt(String pass, String strToEncrypt) {
-        try {
-            byte[] iv = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-            IvParameterSpec ivspec = new IvParameterSpec(iv);
+    private static IvParameterSpec ivspec;
+    private static SecretKeySpec secretKey;
 
+    public static void generateIV(){
+        byte[] iv = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        ivspec = new IvParameterSpec(iv);
+    }
+
+    public static void generateSecretKey(String pass){
+        try {
             SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
             KeySpec spec = new PBEKeySpec(pass.toCharArray(), SALT.getBytes(), 65536, 256);
             SecretKey tmp = factory.generateSecret(spec);
-            SecretKeySpec secretKey = new SecretKeySpec(tmp.getEncoded(), "AES");
+            secretKey = new SecretKeySpec(tmp.getEncoded(), "AES");
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+            e.printStackTrace();
+        }
+    }
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public static String encrypt(String strToEncrypt) {
+        try {
             Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
             cipher.init(Cipher.ENCRYPT_MODE, secretKey, ivspec);
             return Base64.getEncoder()
                     .encodeToString(cipher.doFinal(strToEncrypt.getBytes(StandardCharsets.UTF_8)));
-        } catch (InvalidKeySpecException e) {
-            e.printStackTrace();
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         } catch (BadPaddingException e) {
@@ -60,21 +69,11 @@ public class SmsSecure {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
-    public static String decrypt(String pass, String strToDecrypt) {
+    public static String decrypt(String strToDecrypt) {
         try {
-            byte[] iv = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-            IvParameterSpec ivspec = new IvParameterSpec(iv);
-
-            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-            KeySpec spec = new PBEKeySpec(pass.toCharArray(), SALT.getBytes(), 65536, 256);
-            SecretKey tmp = factory.generateSecret(spec);
-            SecretKeySpec secretKey = new SecretKeySpec(tmp.getEncoded(), "AES");
-
             Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
             cipher.init(Cipher.DECRYPT_MODE, secretKey, ivspec);
             return new String(cipher.doFinal(Base64.getDecoder().decode(strToDecrypt)));
-        } catch (InvalidKeySpecException e) {
-            e.printStackTrace();
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         } catch (BadPaddingException e) {

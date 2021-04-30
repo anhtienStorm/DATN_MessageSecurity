@@ -15,12 +15,11 @@ public class Message {
     private String locked;
     private String error_code;
     private String seen;
-    private String priority;
 
     public Message(String _id, String thread_id, String date, String date_sent, String read,
                    String status, String type, String reply_path_present, String subject,
                    String body, String service_center, String locked, String error_code,
-                   String seen, String priority) {
+                   String seen) {
         this._id = _id;
         this.thread_id = thread_id;
         this.date = date;
@@ -35,7 +34,6 @@ public class Message {
         this.locked = locked;
         this.error_code = error_code;
         this.seen = seen;
-        this.priority = priority;
     }
 
     public String get_id() {
@@ -92,9 +90,5 @@ public class Message {
 
     public String getSeen() {
         return seen;
-    }
-
-    public String getPriority() {
-        return priority;
     }
 }
